@@ -69,6 +69,13 @@ export default function Home() {
   const [수정보내는중, 수정보내는중설정] = useState(false);
   const [수정오류, 수정오류설정] = useState("");
 
+  // ✍️ 그 자리에서 바로 번역 남기기 (용어 카드 안에서)
+  const [인라인, 인라인설정] = useState<number | null>(null); // 열려 있는 용어 id
+  const [인라인번역, 인라인번역설정] = useState("");
+  const [인라인메모, 인라인메모설정] = useState("");
+  const [인라인보내는중, 인라인보내는중설정] = useState(false);
+  const [인라인오류, 인라인오류설정] = useState("");
+
   // 꾸밈 효과
   const [팡, 팡설정] = useState<number | null>(null); // 하트 터지는 중인 제안
   const [복사됨, 복사됨설정] = useState<number | null>(null); // 방금 복사한 제안
@@ -284,6 +291,43 @@ export default function Home() {
     }
   }
 
+  // ── ✍️ 용어 카드 안에서 바로 등록 ──────────────────
+  function 인라인열기(용어id: number) {
+    인라인설정(용어id);
+    인라인번역설정("");
+    인라인메모설정("");
+    인라인오류설정("");
+  }
+
+  async function 인라인등록(e: React.FormEvent, 단어: string) {
+    e.preventDefault();
+    인라인보내는중설정(true);
+    인라인오류설정("");
+    try {
+      const 응답 = await fetch("/api/suggestions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          word: 단어,
+          translation: 인라인번역,
+          nickname: 별명,
+          note: 인라인메모,
+        }),
+      });
+      if (!응답.ok) throw new Error(await 응답.text());
+      별명기억();
+      인라인설정(null);
+      인라인번역설정("");
+      인라인메모설정("");
+      // 보던 자리를 그대로 두고 목록만 새로 받아옵니다
+      await 목록불러오기(검색어, 방문자);
+    } catch (e) {
+      인라인오류설정(e instanceof Error ? e.message : "등록하지 못했습니다.");
+    } finally {
+      인라인보내는중설정(false);
+    }
+  }
+
   function 별명기억() {
     try {
       localStorage.setItem("nickname", 별명.trim());
@@ -421,7 +465,7 @@ export default function Home() {
               </div>
 
               {/* 🙋 번역이 아직 없는 단어 */}
-              {용어.제안들.length === 0 && (
+              {용어.제안들.length === 0 && 인라인 !== 용어.id && (
                 <div className="px-5 py-6 text-center">
                   <p className="text-sm text-[var(--연한글자)]">
                     {용어.requestedBy
@@ -430,7 +474,7 @@ export default function Home() {
                   </p>
                   <button
                     type="button"
-                    onClick={() => 폼열기(용어.word, false)}
+                    onClick={() => 인라인열기(용어.id)}
                     className="mt-3 rounded-xl bg-[var(--머스터드)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
                   >
                     ✍️ 첫 번역 남기기
@@ -659,6 +703,82 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
+
+              {/* ✍️ 이 단어에 바로 번역 남기기 */}
+              {인라인 === 용어.id ? (
+                <form
+                  onSubmit={(e) => 인라인등록(e, 용어.word)}
+                  className="떠오름 border-t-2 border-[var(--테두리)] bg-[var(--크림)] px-5 py-4"
+                >
+                  <p className="text-sm font-semibold text-[var(--테라코타)]">
+                    ✍️ &ldquo;{용어.word}&rdquo; 에 내 번역 남기기
+                  </p>
+                  <input
+                    autoFocus
+                    value={인라인번역}
+                    onChange={(e) => 인라인번역설정(e.target.value)}
+                    placeholder="스페인어 번역"
+                    maxLength={200}
+                    className="mt-2 w-full rounded-xl border-2 border-[var(--테두리)] bg-[var(--종이)] px-4 py-3 focus:border-[var(--테라코타)] focus:outline-none"
+                  />
+                  <textarea
+                    value={인라인메모}
+                    onChange={(e) => 인라인메모설정(e.target.value)}
+                    placeholder="💡 왜 이렇게 번역했나요? (선택)"
+                    rows={2}
+                    maxLength={300}
+                    className="mt-2 w-full resize-none rounded-xl border-2 border-[var(--테두리)] bg-[var(--종이)] px-4 py-3 text-sm focus:border-[var(--테라코타)] focus:outline-none"
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      value={별명}
+                      onChange={(e) => 별명설정(e.target.value)}
+                      placeholder="별명"
+                      maxLength={20}
+                      className="w-32 rounded-xl border-2 border-[var(--테두리)] bg-[var(--종이)] px-3 py-2 text-sm focus:border-[var(--테라코타)] focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => 별명설정(별명뽑기())}
+                      title="별명 새로 뽑기"
+                      className="rounded-xl border-2 border-[var(--테두리)] bg-[var(--종이)] px-3 text-lg hover:border-[var(--머스터드)]"
+                    >
+                      🎲
+                    </button>
+                  </div>
+                  {인라인오류 && (
+                    <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                      {인라인오류}
+                    </p>
+                  )}
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => 인라인설정(null)}
+                      className="rounded-xl border-2 border-[var(--테두리)] bg-[var(--종이)] px-4 py-2 text-sm hover:bg-[var(--크림)]"
+                    >
+                      취소
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={인라인보내는중}
+                      className="flex-1 rounded-xl bg-[var(--테라코타)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--테라코타진)] disabled:opacity-40"
+                    >
+                      {인라인보내는중 ? "등록 중..." : "등록하기"}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                용어.제안들.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => 인라인열기(용어.id)}
+                    className="w-full border-t-2 border-[var(--테두리)] px-5 py-3 text-sm text-[var(--연한글자)] transition hover:bg-[var(--크림)] hover:text-[var(--테라코타)]"
+                  >
+                    ＋ 이 단어에 내 번역도 남기기
+                  </button>
+                )
+              )}
             </section>
           ))}
         </div>
