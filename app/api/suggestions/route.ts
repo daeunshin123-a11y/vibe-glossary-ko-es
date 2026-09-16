@@ -76,3 +76,62 @@ export async function POST(요청: Request) {
 function 나쁜요청(메시지: string, 코드 = 400) {
   return new Response(메시지, { status: 코드 });
 }
+
+// ─────────────────────────────────────────────────────────────
+// ✏️ 번역 수정하기 (위키 방식 — 누구나 고칠 수 있습니다)
+//
+//   PATCH /api/suggestions
+//   { id, translation, note, nickname }
+//
+//   누구나 고칠 수 있는 대신, '누가 고쳤는지'를 남겨서
+//   아무도 몰래 바꾸지 못하게 합니다.
+//   원문(단어)과 처음 올린 사람의 별명은 바꾸지 않습니다.
+// ─────────────────────────────────────────────────────────────
+export async function PATCH(요청: Request) {
+  try {
+    const 받은것 = await 요청.json();
+
+    const id = Number(받은것.id);
+    const translation = String(받은것.translation ?? "").trim();
+    const note = String(받은것.note ?? "").trim();
+    const nickname = String(받은것.nickname ?? "").trim();
+
+    if (!Number.isInteger(id) || id <= 0) return 나쁜요청("잘못된 요청입니다.");
+    if (!translation) return 나쁜요청("스페인어 번역을 입력해 주세요.");
+    if (!nickname) return 나쁜요청("수정하려면 별명을 입력해 주세요.");
+    if (translation.length > 최대.translation)
+      return 나쁜요청(`번역은 ${최대.translation}자 이내로 써주세요.`);
+    if (note.length > 최대.note)
+      return 나쁜요청(`메모는 ${최대.note}자 이내로 써주세요.`);
+    if (nickname.length > 최대.nickname)
+      return 나쁜요청(`별명은 ${최대.nickname}자 이내로 써주세요.`);
+
+    const 있나 = await db.execute({
+      sql: `select id from suggestions where id = ?`,
+      args: [id],
+    });
+    if (있나.rows.length === 0) return 나쁜요청("없는 번역입니다.", 404);
+
+    try {
+      await db.execute({
+        sql: `update suggestions
+                 set translation = ?, note = ?, edited_by = ?,
+                     updated_at = datetime('now')
+               where id = ?`,
+        args: [translation, note || null, nickname, id],
+      });
+    } catch (오류) {
+      // 🔒 UNIQUE(term_id, translation, nickname) 에 걸린 경우
+      const 메시지 = 오류 instanceof Error ? 오류.message : "";
+      if (/UNIQUE|constraint/i.test(메시지)) {
+        return 나쁜요청("같은 번역이 이미 등록되어 있어요.", 409);
+      }
+      throw 오류;
+    }
+
+    return Response.json({ ok: true });
+  } catch (오류) {
+    console.error("[수정 실패]", 오류);
+    return new Response("수정하지 못했습니다.", { status: 500 });
+  }
+}

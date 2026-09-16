@@ -62,6 +62,29 @@ for (const sql of 만들기) {
   console.log("  ✓", 이름);
 }
 
+// ── 나중에 추가된 칸들 ────────────────────────────────
+// 이미 쓰고 있는 표에 칸을 더할 때 씁니다.
+// 기존 데이터는 그대로 남고, 새 칸만 빈칸으로 생깁니다.
+const 칸추가 = [
+  // 🙋 번역 요청: 단어만 등록한 사람의 별명
+  ["terms", "requested_by", "TEXT"],
+
+  // ✏️ 수정 흔적: 누가 언제 고쳤는지 (위키처럼 누구나 고칠 수 있으므로)
+  ["suggestions", "edited_by", "TEXT"],
+  ["suggestions", "updated_at", "TEXT"],
+];
+
+for (const [표, 칸, 형식] of 칸추가) {
+  const 지금 = await db.execute(`pragma table_info(${표})`);
+  const 있나 = 지금.rows.some((r) => r.name === 칸);
+  if (있나) {
+    console.log(`  · ${표}.${칸} 이미 있음`);
+  } else {
+    await db.execute(`ALTER TABLE ${표} ADD COLUMN ${칸} ${형식}`);
+    console.log(`  + ${표}.${칸} 추가됨`);
+  }
+}
+
 const 확인 = await db.execute(
   `select name from sqlite_master
     where type='table' and name not like 'sqlite_%'

@@ -25,11 +25,13 @@ export async function GET(요청: Request) {
       sql: `
         select t.id            as term_id,
                t.word          as word,
+               t.requested_by  as requested_by,
                s.id            as suggestion_id,
                s.translation   as translation,
                s.nickname      as nickname,
                s.note          as note,
                s.created_at    as created_at,
+               s.edited_by     as edited_by,
                (select count(*) from likes l
                  where l.suggestion_id = s.id)                    as like_count,
                (select count(*) from likes l
@@ -59,13 +61,22 @@ export async function GET(요청: Request) {
       likeCount: number;
       liked: boolean;
       commentCount: number;
+      editedBy: string | null;
     };
-    const 묶음 = new Map<number, { id: number; word: string; 제안들: 제안[] }>();
+    const 묶음 = new Map<
+      number,
+      { id: number; word: string; requestedBy: string | null; 제안들: 제안[] }
+    >();
 
     for (const 줄 of 결과.rows) {
       const 용어id = Number(줄.term_id);
       if (!묶음.has(용어id)) {
-        묶음.set(용어id, { id: 용어id, word: String(줄.word), 제안들: [] });
+        묶음.set(용어id, {
+          id: 용어id,
+          word: String(줄.word),
+          requestedBy: 줄.requested_by == null ? null : String(줄.requested_by),
+          제안들: [],
+        });
       }
       if (줄.suggestion_id != null) {
         묶음.get(용어id)!.제안들.push({
@@ -76,11 +87,36 @@ export async function GET(요청: Request) {
           likeCount: Number(줄.like_count),
           liked: Number(줄.liked) > 0,
           commentCount: Number(줄.comment_count),
+          editedBy: 줄.edited_by == null ? null : String(줄.edited_by),
         });
       }
     }
 
-    return Response.json({ 용어들: [...묶음.values()] });
+    // ── 🌱 기여도: 별명마다 번역 + 댓글을 몇 개 남겼는지 세기 ──
+    // 두 표의 결과를 위아래로 이어 붙인 뒤(UNION ALL) 별명별로 합칩니다.
+    // 세는 것: 번역 등록 + 댓글 + 남의 번역 다듬기
+    // (번역 요청은 단어만 적으면 되는 일이라 세지 않습니다)
+    const 기여 = await db.execute(`
+      select nickname, sum(n) as total from (
+        select nickname, count(*) as n from suggestions group by nickname
+        union all
+        select nickname, count(*) as n from comments    group by nickname
+        union all
+        select edited_by as nickname, count(*) as n
+          from suggestions
+         where edited_by is not null
+           and edited_by <> nickname      -- 내 글을 내가 고친 건 중복으로 안 셉니다
+         group by edited_by
+      )
+      group by nickname
+    `);
+
+    const 기여도: Record<string, number> = {};
+    for (const 줄 of 기여.rows) {
+      기여도[String(줄.nickname)] = Number(줄.total);
+    }
+
+    return Response.json({ 용어들: [...묶음.values()], 기여도 });
   } catch (오류) {
     console.error("[검색 실패]", 오류);
     return new Response("목록을 가져오지 못했습니다.", { status: 500 });
