@@ -48,11 +48,18 @@ export async function GET(요청: Request) {
                  select term_id from suggestions where translation like ?
                                                     or ifnull(note, '') like ?
                )
-           and (? = '' or ifnull(t.category, '') = ?)
-         order by t.word asc, like_count desc, s.created_at asc
+           and (
+                 ? = ''
+                 or (? = '대기'
+                     and not exists (select 1 from suggestions x
+                                      where x.term_id = t.id))
+                 or (? <> '대기' and ifnull(t.category, '') = ?)
+               )
+         order by t.created_at desc, t.id desc,   -- 최신 등록순
+                  like_count desc, s.created_at asc
          limit 300
       `,
-      args: [방문자, 찾을말, 찾을말, 찾을말, 분류, 분류],
+      args: [방문자, 찾을말, 찾을말, 찾을말, 분류, 분류, 분류, 분류],
     });
 
     // 줄줄이 나온 결과를 '용어 하나에 제안 여러 개' 모양으로 묶습니다.
@@ -138,6 +145,13 @@ export async function GET(요청: Request) {
       전체개수 += n;
     }
     분류개수["전체"] = 전체개수;
+
+    // 🙋 번역을 기다리는 단어 수 (번역이 하나도 안 달린 것)
+    const 대기센것 = await db.execute(
+      `select count(*) as n from terms t
+        where not exists (select 1 from suggestions x where x.term_id = t.id)`,
+    );
+    분류개수["대기"] = Number(대기센것.rows[0].n);
 
     return Response.json({ 용어들: [...묶음.values()], 기여도, 분류개수 });
   } catch (오류) {
