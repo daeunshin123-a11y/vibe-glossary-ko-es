@@ -456,6 +456,193 @@ export default function Home() {
           </p>
         </div>
 
+        {/* ── 등록 / 요청 ── */}
+        <div className="mt-6">
+          {!폼열림 ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => 폼열기(undefined, false)}
+                className="flex-1 rounded-2xl bg-[var(--테라코타)] px-4 py-4 text-lg font-semibold text-white transition hover:bg-[var(--테라코타진)]"
+              >
+                ✍️ 내 번역 남기기
+              </button>
+              <button
+                type="button"
+                onClick={() => 폼열기(undefined, true)}
+                className="rounded-2xl border-2 border-[var(--테두리)] bg-[var(--종이)] px-5 py-4 text-lg font-semibold text-[var(--먹색)] transition hover:border-[var(--머스터드)]"
+                title="번역 없이 단어만 등록해서 물어보기"
+              >
+                🙋 번역 요청
+              </button>
+            </div>
+          ) : (
+            <form
+              onSubmit={등록하기}
+              className="떠오름 rounded-2xl border-2 border-[var(--테두리)] bg-[var(--종이)] p-6"
+            >
+              {/* 두 가지 모드를 여기서 바로 바꿀 수 있습니다 */}
+              <div className="flex gap-1 rounded-xl bg-[var(--크림)] p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    요청모드설정(false);
+                    폼메시지설정("");
+                  }}
+                  className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                    !요청모드
+                      ? "bg-[var(--종이)] text-[var(--테라코타)] shadow-sm"
+                      : "text-[var(--연한글자)] hover:text-[var(--먹색)]"
+                  }`}
+                >
+                  ✍️ 번역 남기기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    요청모드설정(true);
+                    폼메시지설정("");
+                  }}
+                  className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                    요청모드
+                      ? "bg-[var(--종이)] text-[var(--테라코타)] shadow-sm"
+                      : "text-[var(--연한글자)] hover:text-[var(--먹색)]"
+                  }`}
+                >
+                  🙋 번역 요청하기
+                </button>
+              </div>
+
+              <p className="mt-3 text-sm text-[var(--연한글자)]">
+                {요청모드
+                  ? "단어만 남겨두면 다른 번역가가 번역을 달아줍니다."
+                  : "내가 옮긴 번역과 그렇게 옮긴 이유를 남겨주세요."}
+              </p>
+
+              <label className="mt-4 block text-sm font-medium text-[var(--먹색)]">
+                한국어 원문
+              </label>
+              <input
+                value={원문}
+                onChange={(e) => 원문설정(e.target.value)}
+                placeholder="집사"
+                maxLength={60}
+                className="mt-1 w-full rounded-xl border-2 border-[var(--테두리)] px-4 py-3 focus:border-[var(--테라코타)] focus:outline-none"
+              />
+
+              <label className="mt-4 block text-sm font-medium text-[var(--먹색)]">
+                분류 <span className="text-[var(--연한글자)]">(선택)</span>
+              </label>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {[{ 값: "", 이모지: "", 이름: "미분류", 설명: "" }, ...분류목록].map(
+                  (분류) => (
+                    <button
+                      key={분류.이름}
+                      type="button"
+                      onClick={() => 새분류설정(분류.값)}
+                      title={분류.설명}
+                      className={`rounded-full border-2 px-3 py-1.5 text-sm transition ${
+                        새분류 === 분류.값
+                          ? "border-[var(--테라코타)] bg-[var(--테라코타)] text-white"
+                          : "border-[var(--테두리)] text-[var(--연한글자)] hover:border-[var(--테라코타)]"
+                      }`}
+                    >
+                      {분류.이모지} {분류.이름}
+                    </button>
+                  ),
+                )}
+              </div>
+              {새분류 === "비속어" && (
+                <p className="mt-1 text-xs text-[var(--연한글자)]">
+                  💡 메모에 강도와 지역을 적어주세요. (예: 멕시코에서 꽤 셈)
+                </p>
+              )}
+
+              {!요청모드 && (
+                <>
+                  <label className="mt-4 block text-sm font-medium text-[var(--먹색)]">
+                    스페인어 번역
+                  </label>
+                  <input
+                    value={번역}
+                    onChange={(e) => 번역설정(e.target.value)}
+                    placeholder="sirviente de gatos"
+                    maxLength={200}
+                    className="mt-1 w-full rounded-xl border-2 border-[var(--테두리)] px-4 py-3 focus:border-[var(--테라코타)] focus:outline-none"
+                  />
+
+                  <label className="mt-4 block text-sm font-medium text-[var(--먹색)]">
+                    왜 이렇게 번역했나요?{" "}
+                    <span className="text-[var(--연한글자)]">(선택)</span>
+                  </label>
+                  <textarea
+                    value={메모}
+                    onChange={(e) => 메모설정(e.target.value)}
+                    placeholder="고양이가 주인이라는 뉘앙스를 살렸어요"
+                    rows={2}
+                    maxLength={300}
+                    className="mt-1 w-full resize-none rounded-xl border-2 border-[var(--테두리)] px-4 py-3 focus:border-[var(--테라코타)] focus:outline-none"
+                  />
+                </>
+              )}
+
+              <label className="mt-4 block text-sm font-medium text-[var(--먹색)]">
+                별명
+              </label>
+              <div className="mt-1 flex gap-2">
+                <input
+                  value={별명}
+                  onChange={(e) => 별명설정(e.target.value)}
+                  placeholder="바다거북"
+                  maxLength={20}
+                  className="flex-1 rounded-xl border-2 border-[var(--테두리)] px-4 py-3 focus:border-[var(--테라코타)] focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => 별명설정(별명뽑기())}
+                  title="별명 새로 뽑기"
+                  className="rounded-xl border-2 border-[var(--테두리)] px-4 text-xl transition hover:border-[var(--머스터드)] hover:bg-[var(--크림)]"
+                >
+                  🎲
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-[var(--연한글자)]">
+                실명 대신 별명을 써주세요. 🎲 를 누르면 새로 뽑아드려요.
+              </p>
+
+              {폼메시지 && (
+                <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  {폼메시지}
+                </p>
+              )}
+
+              <div className="mt-6 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    폼열림설정(false);
+                    폼메시지설정("");
+                  }}
+                  className="rounded-xl border-2 border-[var(--테두리)] px-5 py-3 text-[var(--먹색)] hover:bg-[var(--크림)]"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={보내는중}
+                  className="flex-1 rounded-xl bg-[var(--테라코타)] px-4 py-3 font-semibold text-white transition hover:bg-[var(--테라코타진)] disabled:opacity-40"
+                >
+                  {보내는중
+                    ? "보내는 중..."
+                    : 요청모드
+                      ? "요청 남기기"
+                      : "등록하기"}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+
         {오류 && (
           <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">
             ❌ {오류}
@@ -836,192 +1023,6 @@ export default function Home() {
           ))}
         </div>
 
-        {/* ── 등록 / 요청 ── */}
-        <div className="mt-8">
-          {!폼열림 ? (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => 폼열기(undefined, false)}
-                className="flex-1 rounded-2xl bg-[var(--테라코타)] px-4 py-4 text-lg font-semibold text-white transition hover:bg-[var(--테라코타진)]"
-              >
-                ✍️ 내 번역 남기기
-              </button>
-              <button
-                type="button"
-                onClick={() => 폼열기(undefined, true)}
-                className="rounded-2xl border-2 border-[var(--테두리)] bg-[var(--종이)] px-5 py-4 text-lg font-semibold text-[var(--먹색)] transition hover:border-[var(--머스터드)]"
-                title="번역 없이 단어만 등록해서 물어보기"
-              >
-                🙋 번역 요청
-              </button>
-            </div>
-          ) : (
-            <form
-              onSubmit={등록하기}
-              className="떠오름 rounded-2xl border-2 border-[var(--테두리)] bg-[var(--종이)] p-6"
-            >
-              {/* 두 가지 모드를 여기서 바로 바꿀 수 있습니다 */}
-              <div className="flex gap-1 rounded-xl bg-[var(--크림)] p-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    요청모드설정(false);
-                    폼메시지설정("");
-                  }}
-                  className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                    !요청모드
-                      ? "bg-[var(--종이)] text-[var(--테라코타)] shadow-sm"
-                      : "text-[var(--연한글자)] hover:text-[var(--먹색)]"
-                  }`}
-                >
-                  ✍️ 번역 남기기
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    요청모드설정(true);
-                    폼메시지설정("");
-                  }}
-                  className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                    요청모드
-                      ? "bg-[var(--종이)] text-[var(--테라코타)] shadow-sm"
-                      : "text-[var(--연한글자)] hover:text-[var(--먹색)]"
-                  }`}
-                >
-                  🙋 번역 요청하기
-                </button>
-              </div>
-
-              <p className="mt-3 text-sm text-[var(--연한글자)]">
-                {요청모드
-                  ? "단어만 남겨두면 다른 번역가가 번역을 달아줍니다."
-                  : "내가 옮긴 번역과 그렇게 옮긴 이유를 남겨주세요."}
-              </p>
-
-              <label className="mt-4 block text-sm font-medium text-[var(--먹색)]">
-                한국어 원문
-              </label>
-              <input
-                value={원문}
-                onChange={(e) => 원문설정(e.target.value)}
-                placeholder="집사"
-                maxLength={60}
-                className="mt-1 w-full rounded-xl border-2 border-[var(--테두리)] px-4 py-3 focus:border-[var(--테라코타)] focus:outline-none"
-              />
-
-              <label className="mt-4 block text-sm font-medium text-[var(--먹색)]">
-                분류 <span className="text-[var(--연한글자)]">(선택)</span>
-              </label>
-              <div className="mt-1 flex flex-wrap gap-2">
-                {[{ 값: "", 이모지: "", 이름: "미분류", 설명: "" }, ...분류목록].map(
-                  (분류) => (
-                    <button
-                      key={분류.이름}
-                      type="button"
-                      onClick={() => 새분류설정(분류.값)}
-                      title={분류.설명}
-                      className={`rounded-full border-2 px-3 py-1.5 text-sm transition ${
-                        새분류 === 분류.값
-                          ? "border-[var(--테라코타)] bg-[var(--테라코타)] text-white"
-                          : "border-[var(--테두리)] text-[var(--연한글자)] hover:border-[var(--테라코타)]"
-                      }`}
-                    >
-                      {분류.이모지} {분류.이름}
-                    </button>
-                  ),
-                )}
-              </div>
-              {새분류 === "비속어" && (
-                <p className="mt-1 text-xs text-[var(--연한글자)]">
-                  💡 메모에 강도와 지역을 적어주세요. (예: 멕시코에서 꽤 셈)
-                </p>
-              )}
-
-              {!요청모드 && (
-                <>
-                  <label className="mt-4 block text-sm font-medium text-[var(--먹색)]">
-                    스페인어 번역
-                  </label>
-                  <input
-                    value={번역}
-                    onChange={(e) => 번역설정(e.target.value)}
-                    placeholder="sirviente de gatos"
-                    maxLength={200}
-                    className="mt-1 w-full rounded-xl border-2 border-[var(--테두리)] px-4 py-3 focus:border-[var(--테라코타)] focus:outline-none"
-                  />
-
-                  <label className="mt-4 block text-sm font-medium text-[var(--먹색)]">
-                    왜 이렇게 번역했나요?{" "}
-                    <span className="text-[var(--연한글자)]">(선택)</span>
-                  </label>
-                  <textarea
-                    value={메모}
-                    onChange={(e) => 메모설정(e.target.value)}
-                    placeholder="고양이가 주인이라는 뉘앙스를 살렸어요"
-                    rows={2}
-                    maxLength={300}
-                    className="mt-1 w-full resize-none rounded-xl border-2 border-[var(--테두리)] px-4 py-3 focus:border-[var(--테라코타)] focus:outline-none"
-                  />
-                </>
-              )}
-
-              <label className="mt-4 block text-sm font-medium text-[var(--먹색)]">
-                별명
-              </label>
-              <div className="mt-1 flex gap-2">
-                <input
-                  value={별명}
-                  onChange={(e) => 별명설정(e.target.value)}
-                  placeholder="바다거북"
-                  maxLength={20}
-                  className="flex-1 rounded-xl border-2 border-[var(--테두리)] px-4 py-3 focus:border-[var(--테라코타)] focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => 별명설정(별명뽑기())}
-                  title="별명 새로 뽑기"
-                  className="rounded-xl border-2 border-[var(--테두리)] px-4 text-xl transition hover:border-[var(--머스터드)] hover:bg-[var(--크림)]"
-                >
-                  🎲
-                </button>
-              </div>
-              <p className="mt-1 text-xs text-[var(--연한글자)]">
-                실명 대신 별명을 써주세요. 🎲 를 누르면 새로 뽑아드려요.
-              </p>
-
-              {폼메시지 && (
-                <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                  {폼메시지}
-                </p>
-              )}
-
-              <div className="mt-6 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    폼열림설정(false);
-                    폼메시지설정("");
-                  }}
-                  className="rounded-xl border-2 border-[var(--테두리)] px-5 py-3 text-[var(--먹색)] hover:bg-[var(--크림)]"
-                >
-                  취소
-                </button>
-                <button
-                  type="submit"
-                  disabled={보내는중}
-                  className="flex-1 rounded-xl bg-[var(--테라코타)] px-4 py-3 font-semibold text-white transition hover:bg-[var(--테라코타진)] disabled:opacity-40"
-                >
-                  {보내는중
-                    ? "보내는 중..."
-                    : 요청모드
-                      ? "요청 남기기"
-                      : "등록하기"}
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
 
         {/* 🌱 등급 안내 */}
         <div className="mt-8 rounded-2xl border-2 border-[var(--테두리)] bg-[var(--종이)] px-5 py-4">
