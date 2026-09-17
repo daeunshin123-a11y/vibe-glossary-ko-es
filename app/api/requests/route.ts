@@ -19,6 +19,8 @@ export async function POST(요청: Request) {
     const 받은것 = await 요청.json();
     const word = String(받은것.word ?? "").trim();
     const nickname = String(받은것.nickname ?? "").trim();
+    const category = String(받은것.category ?? "").trim();
+    const 분류 = ["문화", "신조어", "비속어"].includes(category) ? category : null;
 
     if (!word) return new Response("한국어 원문을 입력해 주세요.", { status: 400 });
     if (!nickname) return new Response("별명을 입력해 주세요.", { status: 400 });
@@ -46,8 +48,8 @@ export async function POST(요청: Request) {
     }
 
     await db.execute({
-      sql: `insert into terms (word, requested_by) values (?, ?)`,
-      args: [word, nickname],
+      sql: `insert into terms (word, requested_by, category) values (?, ?, ?)`,
+      args: [word, nickname, 분류],
     });
 
     return Response.json({ ok: true });

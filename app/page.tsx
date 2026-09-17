@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { 별명뽑기 } from "@/lib/별명";
 import { 등급이모지, 등급표 } from "@/lib/등급";
+import { 분류목록, 분류찾기 } from "@/lib/분류";
 
 type 제안 = {
   id: number;
@@ -18,6 +19,7 @@ type 용어 = {
   id: number;
   word: string;
   requestedBy: string | null;
+  category: string | null;
   제안들: 제안[];
 };
 type 댓글 = { id: number; nickname: string; body: string };
@@ -42,6 +44,9 @@ export default function Home() {
   const [검색어, 검색어설정] = useState("");
   const [용어들, 용어들설정] = useState<용어[]>([]);
   const [기여도, 기여도설정] = useState<Record<string, number>>({});
+  const [분류개수, 분류개수설정] = useState<Record<string, number>>({});
+  const [고른분류, 고른분류설정] = useState(""); // 비우면 전체
+  const [새분류, 새분류설정] = useState(""); // 등록 폼에서 고른 분류
   const [불러오는중, 불러오는중설정] = useState(true);
   const [오류, 오류설정] = useState("");
 
@@ -92,18 +97,20 @@ export default function Home() {
     }
   }, []);
 
-  const 목록불러오기 = useCallback(async (q: string, 번호: string) => {
+  const 목록불러오기 = useCallback(async (q: string, 번호: string, cat = "") => {
     if (!번호) return;
     불러오는중설정(true);
     오류설정("");
     try {
       const 응답 = await fetch(
-        `/api/terms?q=${encodeURIComponent(q)}&visitor=${encodeURIComponent(번호)}`,
+        `/api/terms?q=${encodeURIComponent(q)}&visitor=${encodeURIComponent(번호)}` +
+          `&cat=${encodeURIComponent(cat)}`,
       );
       if (!응답.ok) throw new Error(await 응답.text());
       const 결과 = await 응답.json();
       용어들설정(결과.용어들 ?? []);
       기여도설정(결과.기여도 ?? {});
+      분류개수설정(결과.분류개수 ?? {});
     } catch (e) {
       오류설정(e instanceof Error ? e.message : "목록을 가져오지 못했습니다.");
     } finally {
@@ -118,7 +125,16 @@ export default function Home() {
   function 검색어바뀜(값: string) {
     검색어설정(값);
     if (검색타이머.current) clearTimeout(검색타이머.current);
-    검색타이머.current = setTimeout(() => 목록불러오기(값, 방문자), 300);
+    검색타이머.current = setTimeout(
+      () => 목록불러오기(값, 방문자, 고른분류),
+      300,
+    );
+  }
+
+  // 🏷 분류 탭 바꾸기
+  function 분류바꾸기(값: string) {
+    고른분류설정(값);
+    목록불러오기(검색어, 방문자, 값);
   }
 
   // ── 📋 번역문 복사 ─────────────────────────────────
@@ -320,7 +336,7 @@ export default function Home() {
       인라인번역설정("");
       인라인메모설정("");
       // 보던 자리를 그대로 두고 목록만 새로 받아옵니다
-      await 목록불러오기(검색어, 방문자);
+      await 목록불러오기(검색어, 방문자, 고른분류);
     } catch (e) {
       인라인오류설정(e instanceof Error ? e.message : "등록하지 못했습니다.");
     } finally {
@@ -344,8 +360,14 @@ export default function Home() {
     try {
       const 주소 = 요청모드 ? "/api/requests" : "/api/suggestions";
       const 보낼것 = 요청모드
-        ? { word: 원문, nickname: 별명 }
-        : { word: 원문, translation: 번역, nickname: 별명, note: 메모 };
+        ? { word: 원문, nickname: 별명, category: 새분류 }
+        : {
+            word: 원문,
+            translation: 번역,
+            nickname: 별명,
+            note: 메모,
+            category: 새분류,
+          };
 
       const 응답 = await fetch(주소, {
         method: "POST",
@@ -362,7 +384,7 @@ export default function Home() {
       폼열림설정(false);
       요청모드설정(false);
       검색어설정(넣은단어);
-      await 목록불러오기(넣은단어, 방문자);
+      await 목록불러오기(넣은단어, 방문자, 고른분류);
     } catch (e) {
       폼메시지설정(e instanceof Error ? e.message : "등록하지 못했습니다.");
     } finally {
@@ -403,7 +425,30 @@ export default function Home() {
             placeholder="🔍 한국어 · 스페인어 · 메모로 검색"
             className="w-full rounded-2xl border-2 border-[var(--테두리)] bg-[var(--종이)] px-5 py-4 text-lg text-[var(--먹색)] placeholder:text-[var(--연한글자)] focus:border-[var(--테라코타)] focus:outline-none"
           />
-          <p className="mt-2 text-sm text-[var(--연한글자)]">
+          {/* 🏷 분류 탭 */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {[{ 값: "", 이모지: "", 이름: "전체" }, ...분류목록].map((분류) => {
+              const 켜짐 = 고른분류 === 분류.값;
+              const 개수 = 분류개수[분류.값 || "전체"] ?? 0;
+              return (
+                <button
+                  key={분류.이름}
+                  type="button"
+                  onClick={() => 분류바꾸기(분류.값)}
+                  className={`rounded-full border-2 px-4 py-1.5 text-sm font-medium transition ${
+                    켜짐
+                      ? "border-[var(--테라코타)] bg-[var(--테라코타)] text-white"
+                      : "border-[var(--테두리)] bg-[var(--종이)] text-[var(--연한글자)] hover:border-[var(--테라코타)]"
+                  }`}
+                >
+                  {분류.이모지} {분류.이름}
+                  <span className={켜짐 ? "opacity-80" : "opacity-60"}> {개수}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="mt-3 text-sm text-[var(--연한글자)]">
             {불러오는중
               ? "찾는 중..."
               : `용어 ${용어들.length}개 · 번역 ${제안개수}개` +
@@ -456,7 +501,15 @@ export default function Home() {
               className="떠오름 overflow-hidden rounded-2xl border-2 border-[var(--테두리)] bg-[var(--종이)]"
             >
               <div className="flex items-baseline justify-between border-b-2 border-[var(--테두리)] px-5 py-4">
-                <h2 className="text-xl font-bold text-[var(--먹색)]">{용어.word}</h2>
+                <h2 className="flex items-center gap-2 text-xl font-bold text-[var(--먹색)]">
+                  {용어.word}
+                  {분류찾기(용어.category) && (
+                    <span className="rounded-full bg-[var(--크림)] px-2 py-0.5 text-xs font-medium text-[var(--연한글자)]">
+                      {분류찾기(용어.category)!.이모지}{" "}
+                      {분류찾기(용어.category)!.이름}
+                    </span>
+                  )}
+                </h2>
                 <span className="text-sm text-[var(--연한글자)]">
                   {용어.제안들.length > 0
                     ? `번역 ${용어.제안들.length}개`
@@ -856,6 +909,34 @@ export default function Home() {
                 maxLength={60}
                 className="mt-1 w-full rounded-xl border-2 border-[var(--테두리)] px-4 py-3 focus:border-[var(--테라코타)] focus:outline-none"
               />
+
+              <label className="mt-4 block text-sm font-medium text-[var(--먹색)]">
+                분류 <span className="text-[var(--연한글자)]">(선택)</span>
+              </label>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {[{ 값: "", 이모지: "", 이름: "미분류", 설명: "" }, ...분류목록].map(
+                  (분류) => (
+                    <button
+                      key={분류.이름}
+                      type="button"
+                      onClick={() => 새분류설정(분류.값)}
+                      title={분류.설명}
+                      className={`rounded-full border-2 px-3 py-1.5 text-sm transition ${
+                        새분류 === 분류.값
+                          ? "border-[var(--테라코타)] bg-[var(--테라코타)] text-white"
+                          : "border-[var(--테두리)] text-[var(--연한글자)] hover:border-[var(--테라코타)]"
+                      }`}
+                    >
+                      {분류.이모지} {분류.이름}
+                    </button>
+                  ),
+                )}
+              </div>
+              {새분류 === "비속어" && (
+                <p className="mt-1 text-xs text-[var(--연한글자)]">
+                  💡 메모에 강도와 지역을 적어주세요. (예: 멕시코에서 꽤 셈)
+                </p>
+              )}
 
               {!요청모드 && (
                 <>

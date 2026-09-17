@@ -72,6 +72,9 @@ const 칸추가 = [
   // ✏️ 수정 흔적: 누가 언제 고쳤는지 (위키처럼 누구나 고칠 수 있으므로)
   ["suggestions", "edited_by", "TEXT"],
   ["suggestions", "updated_at", "TEXT"],
+
+  // 🏷 분류: 문화 / 신조어 / 비속어 (비어 있으면 미분류)
+  ["terms", "category", "TEXT"],
 ];
 
 for (const [표, 칸, 형식] of 칸추가) {

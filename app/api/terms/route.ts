@@ -17,6 +17,7 @@ export async function GET(요청: Request) {
     const 주소 = new URL(요청.url);
     const 검색어 = (주소.searchParams.get("q") ?? "").trim();
     const 방문자 = (주소.searchParams.get("visitor") ?? "").trim();
+    const 분류 = (주소.searchParams.get("cat") ?? "").trim(); // 비우면 전체
 
     const 찾을말 = `%${검색어}%`; // 비어 있으면 '%%' 라서 전부 걸립니다
 
@@ -26,6 +27,7 @@ export async function GET(요청: Request) {
         select t.id            as term_id,
                t.word          as word,
                t.requested_by  as requested_by,
+               t.category      as category,
                s.id            as suggestion_id,
                s.translation   as translation,
                s.nickname      as nickname,
@@ -46,10 +48,11 @@ export async function GET(요청: Request) {
                  select term_id from suggestions where translation like ?
                                                     or ifnull(note, '') like ?
                )
+           and (? = '' or ifnull(t.category, '') = ?)
          order by t.word asc, like_count desc, s.created_at asc
          limit 300
       `,
-      args: [방문자, 찾을말, 찾을말, 찾을말],
+      args: [방문자, 찾을말, 찾을말, 찾을말, 분류, 분류],
     });
 
     // 줄줄이 나온 결과를 '용어 하나에 제안 여러 개' 모양으로 묶습니다.
@@ -65,7 +68,13 @@ export async function GET(요청: Request) {
     };
     const 묶음 = new Map<
       number,
-      { id: number; word: string; requestedBy: string | null; 제안들: 제안[] }
+      {
+        id: number;
+        word: string;
+        requestedBy: string | null;
+        category: string | null;
+        제안들: 제안[];
+      }
     >();
 
     for (const 줄 of 결과.rows) {
@@ -75,6 +84,7 @@ export async function GET(요청: Request) {
           id: 용어id,
           word: String(줄.word),
           requestedBy: 줄.requested_by == null ? null : String(줄.requested_by),
+          category: 줄.category == null ? null : String(줄.category),
           제안들: [],
         });
       }
@@ -116,7 +126,20 @@ export async function GET(요청: Request) {
       기여도[String(줄.nickname)] = Number(줄.total);
     }
 
-    return Response.json({ 용어들: [...묶음.values()], 기여도 });
+    // 🏷 분류별 개수 (필터 버튼에 숫자를 붙이려고)
+    const 분류센것 = await db.execute(
+      `select ifnull(category, '') as cat, count(*) as n from terms group by cat`,
+    );
+    const 분류개수: Record<string, number> = {};
+    let 전체개수 = 0;
+    for (const 줄 of 분류센것.rows) {
+      const n = Number(줄.n);
+      분류개수[String(줄.cat)] = n;
+      전체개수 += n;
+    }
+    분류개수["전체"] = 전체개수;
+
+    return Response.json({ 용어들: [...묶음.values()], 기여도, 분류개수 });
   } catch (오류) {
     console.error("[검색 실패]", 오류);
     return new Response("목록을 가져오지 못했습니다.", { status: 500 });
