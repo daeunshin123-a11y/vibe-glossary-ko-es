@@ -69,6 +69,8 @@ export default function Home() {
 
   // ✏️ 수정 (위키 방식 — 누구나 고칠 수 있습니다)
   const [고치는중, 고치는중설정] = useState<number | null>(null);
+  const [새원문, 새원문설정] = useState("");
+  const [수정분류, 수정분류설정] = useState("");
   const [새번역, 새번역설정] = useState("");
   const [새메모, 새메모설정] = useState("");
   const [수정보내는중, 수정보내는중설정] = useState(false);
@@ -259,8 +261,10 @@ export default function Home() {
   }
 
   // ── ✏️ 번역 수정 ───────────────────────────────────
-  function 고치기시작(제안: 제안) {
+  function 고치기시작(용어: 용어, 제안: 제안) {
     고치는중설정(제안.id);
+    새원문설정(용어.word);
+    수정분류설정(용어.category ?? "");
     새번역설정(제안.translation);
     새메모설정(제안.note ?? "");
     수정오류설정("");
@@ -276,6 +280,8 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: 제안id,
+          word: 새원문,
+          category: 수정분류,
           translation: 새번역,
           note: 새메모,
           nickname: 별명,
@@ -300,6 +306,7 @@ export default function Home() {
         })),
       );
       고치는중설정(null);
+      await 목록불러오기(검색어, 방문자, 고른분류); // 원문이 바뀌었을 수 있어 다시 받아옵니다
     } catch (e) {
       수정오류설정(e instanceof Error ? e.message : "수정하지 못했습니다.");
     } finally {
@@ -735,13 +742,60 @@ export default function Home() {
                       /* ── ✏️ 수정 중 ── */
                       <form onSubmit={(e) => 수정저장(e, 제안.id)} className="떠오름">
                         <p className="text-sm font-semibold text-[var(--테라코타)]">
-                          ✏️ 번역 고치기
+                          ✏️ 고치기
                         </p>
+
+                        {/* 📝 한국어 원문 */}
+                        <label className="mt-3 block text-xs text-[var(--연한글자)]">
+                          한국어 원문
+                        </label>
+                        <input
+                          value={새원문}
+                          onChange={(e) => 새원문설정(e.target.value)}
+                          maxLength={60}
+                          className="mt-1 w-full rounded-xl border-2 border-[var(--테두리)] px-4 py-3 focus:border-[var(--테라코타)] focus:outline-none"
+                        />
+                        {새원문.trim() !== 용어.word && 새원문.trim() !== "" && (
+                          <p className="mt-1 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                            ⚠️ 원문을 바꾸면 이 단어에 달린 번역{" "}
+                            {용어.제안들.length}개와 하트·댓글이 전부 함께
+                            옮겨집니다. 오타 고칠 때만 쓰세요.
+                          </p>
+                        )}
+
+                        {/* 🏷 분류 */}
+                        <label className="mt-3 block text-xs text-[var(--연한글자)]">
+                          분류
+                        </label>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          {[
+                            { 값: "", 이모지: "", 이름: "미분류" },
+                            ...분류목록,
+                          ].map((분류) => (
+                            <button
+                              key={분류.이름}
+                              type="button"
+                              onClick={() => 수정분류설정(분류.값)}
+                              className={`rounded-full border-2 px-3 py-1 text-xs transition ${
+                                수정분류 === 분류.값
+                                  ? "border-[var(--테라코타)] bg-[var(--테라코타)] text-white"
+                                  : "border-[var(--테두리)] text-[var(--연한글자)] hover:border-[var(--테라코타)]"
+                              }`}
+                            >
+                              {분류.이모지} {분류.이름}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* 🇪🇸 번역문 */}
+                        <label className="mt-3 block text-xs text-[var(--연한글자)]">
+                          스페인어 번역
+                        </label>
                         <input
                           value={새번역}
                           onChange={(e) => 새번역설정(e.target.value)}
                           maxLength={200}
-                          className="mt-2 w-full rounded-xl border-2 border-[var(--테두리)] px-4 py-3 focus:border-[var(--테라코타)] focus:outline-none"
+                          className="mt-1 w-full rounded-xl border-2 border-[var(--테두리)] px-4 py-3 focus:border-[var(--테라코타)] focus:outline-none"
                         />
                         <div className="mt-2 flex items-center justify-between">
                           <span className="text-xs text-[var(--연한글자)]">
@@ -818,7 +872,7 @@ export default function Home() {
                           {/* ✏️ 수정 — 누구나 고칠 수 있습니다 */}
                           <button
                             type="button"
-                            onClick={() => 고치기시작(제안)}
+                            onClick={() => 고치기시작(용어, 제안)}
                             title="번역 고치기"
                             className="shrink-0 rounded-lg px-2 py-1 text-xs text-[var(--연한글자)] hover:bg-[var(--크림)] hover:text-[var(--테라코타)]"
                           >

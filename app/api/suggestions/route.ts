@@ -122,12 +122,39 @@ export async function PATCH(요청: Request) {
     });
     if (있나.rows.length === 0) return 나쁜요청("없는 번역입니다.", 404);
 
+    const 용어id = Number(있나.rows[0].term_id);
+
     // 🏷 분류도 함께 고칠 수 있습니다 (잘못 넣은 분류를 바로잡을 수 있게)
     const 새분류 = 분류정리(category);
     if (새분류) {
       await db.execute({
         sql: `update terms set category = ? where id = ?`,
-        args: [새분류, Number(있나.rows[0].term_id)],
+        args: [새분류, 용어id],
+      });
+    }
+
+    // 📝 한국어 원문도 고칠 수 있습니다 (오타 바로잡기용)
+    //    ⚠️ 이 단어에 달린 모든 번역·하트·댓글이 함께 따라갑니다.
+    const word = String(받은것.word ?? "").trim();
+    if (word) {
+      if (word.length > 최대.word)
+        return 나쁜요청(`원문은 ${최대.word}자 이내로 써주세요.`);
+
+      // 이미 있는 단어로는 못 바꿉니다 (두 단어가 합쳐지면 되돌리기 어려움)
+      const 겹침 = await db.execute({
+        sql: `select id from terms where word = ? and id <> ?`,
+        args: [word, 용어id],
+      });
+      if (겹침.rows.length > 0) {
+        return 나쁜요청(
+          `"${word}" 는 이미 등록된 단어예요. 다른 이름으로 바꿔주세요.`,
+          409,
+        );
+      }
+
+      await db.execute({
+        sql: `update terms set word = ? where id = ?`,
+        args: [word, 용어id],
       });
     }
 
