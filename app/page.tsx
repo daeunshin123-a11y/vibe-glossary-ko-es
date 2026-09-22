@@ -97,6 +97,24 @@ export default function Home() {
     } catch {
       별명설정(별명뽑기());
     }
+
+    // 🤖 챗봇에서 "용어집에 등록하기" 로 넘어온 경우
+    //    주소가  ?add=잼민이  이면 등록 폼을 미리 열어 둡니다.
+    //    ?draft=mocoso  가 있으면 AI 초안도 번역칸에 채워 줍니다.
+    try {
+      const 주소값 = new URLSearchParams(window.location.search);
+      const 넘어온단어 = (주소값.get("add") ?? "").trim();
+      if (넘어온단어) {
+        원문설정(넘어온단어.slice(0, 60));
+        번역설정((주소값.get("draft") ?? "").trim().slice(0, 200));
+        폼열림설정(true);
+        요청모드설정(false);
+        // 주소창은 깔끔하게 되돌립니다 (새로고침해도 또 열리지 않게)
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+    } catch {
+      /* 주소를 못 읽어도 화면은 그냥 정상 동작합니다 */
+    }
   }, []);
 
   const 목록불러오기 = useCallback(async (q: string, 번호: string, cat = "") => {
