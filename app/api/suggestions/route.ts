@@ -11,6 +11,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { db } from "@/lib/db";
+import { 올바른지역인가 } from "@/lib/지역";
 
 export const runtime = "nodejs";
 
@@ -25,6 +26,7 @@ export async function POST(요청: Request) {
     const nickname = String(받은것.nickname ?? "").trim();
     const note = String(받은것.note ?? "").trim();
     const category = String(받은것.category ?? "").trim(); // 🏷 문화/신조어/비속어
+    const region = String(받은것.region ?? "").trim(); // 🌎 중립/멕시코/...
 
     // ── 빈칸 검사 ──────────────────────────────────────
     if (!word) return 나쁜요청("한국어 원문을 입력해 주세요.");
@@ -55,9 +57,9 @@ export async function POST(요청: Request) {
     // ── ② 번역 달기 ───────────────────────────────────
     try {
       await db.execute({
-        sql: `insert into suggestions (term_id, translation, nickname, note)
-              values (?, ?, ?, ?)`,
-        args: [용어id, translation, nickname, note || null],
+        sql: `insert into suggestions (term_id, translation, nickname, note, region)
+              values (?, ?, ?, ?, ?)`,
+        args: [용어id, translation, nickname, note || null, 지역정리(region)],
       });
     } catch (오류) {
       // 🔒 UNIQUE(term_id, translation, nickname) 에 걸린 경우
@@ -86,6 +88,11 @@ function 분류정리(값: string) {
   return (분류들 as readonly string[]).includes(값) ? 값 : null;
 }
 
+// 🌎 정해진 지역만 받습니다. 그 밖의 값은 '미확인'(null)로 둡니다.
+function 지역정리(값: string) {
+  return 올바른지역인가(값) ? 값 : null;
+}
+
 // ─────────────────────────────────────────────────────────────
 // ✏️ 번역 수정하기 (위키 방식 — 누구나 고칠 수 있습니다)
 //
@@ -104,6 +111,7 @@ export async function PATCH(요청: Request) {
     const translation = String(받은것.translation ?? "").trim();
     const note = String(받은것.note ?? "").trim();
     const category = String(받은것.category ?? "").trim(); // 🏷 문화/신조어/비속어
+    const region = String(받은것.region ?? "").trim(); // 🌎 지역
     const nickname = String(받은것.nickname ?? "").trim();
 
     if (!Number.isInteger(id) || id <= 0) return 나쁜요청("잘못된 요청입니다.");
@@ -161,10 +169,10 @@ export async function PATCH(요청: Request) {
     try {
       await db.execute({
         sql: `update suggestions
-                 set translation = ?, note = ?, edited_by = ?,
+                 set translation = ?, note = ?, region = ?, edited_by = ?,
                      updated_at = datetime('now')
                where id = ?`,
-        args: [translation, note || null, nickname, id],
+        args: [translation, note || null, 지역정리(region), nickname, id],
       });
     } catch (오류) {
       // 🔒 UNIQUE(term_id, translation, nickname) 에 걸린 경우

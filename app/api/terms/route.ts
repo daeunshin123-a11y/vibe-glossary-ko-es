@@ -34,6 +34,7 @@ export async function GET(요청: Request) {
                s.note          as note,
                s.created_at    as created_at,
                s.edited_by     as edited_by,
+               s.region        as region,
                (select count(*) from likes l
                  where l.suggestion_id = s.id)                    as like_count,
                (select count(*) from likes l
@@ -72,6 +73,7 @@ export async function GET(요청: Request) {
       liked: boolean;
       commentCount: number;
       editedBy: string | null;
+      region: string | null;
     };
     const 묶음 = new Map<
       number,
@@ -105,6 +107,7 @@ export async function GET(요청: Request) {
           liked: Number(줄.liked) > 0,
           commentCount: Number(줄.comment_count),
           editedBy: 줄.edited_by == null ? null : String(줄.edited_by),
+          region: 줄.region == null ? null : String(줄.region),
         });
       }
     }

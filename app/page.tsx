@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { 별명뽑기 } from "@/lib/별명";
 import { 등급이모지, 등급표 } from "@/lib/등급";
 import { 분류목록, 분류찾기 } from "@/lib/분류";
+import { 지역목록, 지역찾기 } from "@/lib/지역";
 
 type 제안 = {
   id: number;
@@ -14,6 +15,7 @@ type 제안 = {
   liked: boolean;
   commentCount: number;
   editedBy: string | null; // ✏️ 마지막으로 고친 사람 (없으면 원본 그대로)
+  region: string | null;   // 🌎 어디서 통하는 말인지
 };
 type 용어 = {
   id: number;
@@ -47,6 +49,8 @@ export default function Home() {
   const [분류개수, 분류개수설정] = useState<Record<string, number>>({});
   const [고른분류, 고른분류설정] = useState(""); // 비우면 전체
   const [새분류, 새분류설정] = useState(""); // 등록 폼에서 고른 분류
+  const [새지역, 새지역설정] = useState(""); // 🌎 등록 폼에서 고른 지역
+  const [수정지역, 수정지역설정] = useState(""); // 🌎 수정 폼에서 고른 지역
   const [불러오는중, 불러오는중설정] = useState(true);
   const [오류, 오류설정] = useState("");
 
@@ -107,6 +111,9 @@ export default function Home() {
       if (넘어온단어) {
         원문설정(넘어온단어.slice(0, 60));
         번역설정((주소값.get("draft") ?? "").trim().slice(0, 200));
+        메모설정((주소값.get("note") ?? "").trim().slice(0, 300));
+        새지역설정((주소값.get("region") ?? "").trim());
+        새분류설정((주소값.get("category") ?? "").trim());
         폼열림설정(true);
         요청모드설정(false);
         // 주소창은 깔끔하게 되돌립니다 (새로고침해도 또 열리지 않게)
@@ -283,6 +290,7 @@ export default function Home() {
     고치는중설정(제안.id);
     새원문설정(용어.word);
     수정분류설정(용어.category ?? "");
+    수정지역설정(제안.region ?? "");
     새번역설정(제안.translation);
     새메모설정(제안.note ?? "");
     수정오류설정("");
@@ -300,6 +308,7 @@ export default function Home() {
           id: 제안id,
           word: 새원문,
           category: 수정분류,
+          region: 수정지역,
           translation: 새번역,
           note: 새메모,
           nickname: 별명,
@@ -317,6 +326,7 @@ export default function Home() {
                   ...제안,
                   translation: 새번역.trim(),
                   note: 새메모.trim() || null,
+                  region: 수정지역 || null,
                   editedBy: 별명.trim(),
                 }
               : 제안,
@@ -392,6 +402,7 @@ export default function Home() {
             nickname: 별명,
             note: 메모,
             category: 새분류,
+            region: 새지역,
           };
 
       const 응답 = await fetch(주소, {
@@ -583,6 +594,36 @@ export default function Home() {
                   ),
                 )}
               </div>
+              {!요청모드 && (
+                <>
+                  <label className="mt-4 block text-sm font-medium text-[var(--먹색)]">
+                    🌎 지역 <span className="text-[var(--연한글자)]">(선택)</span>
+                  </label>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {[{ 값: "", 이모지: "", 이름: "미확인", 설명: "" }, ...지역목록].map(
+                      (지역) => (
+                        <button
+                          key={지역.이름}
+                          type="button"
+                          onClick={() => 새지역설정(지역.값)}
+                          title={지역.설명}
+                          className={`rounded-full border-2 px-3 py-1.5 text-sm transition ${
+                            새지역 === 지역.값
+                              ? "border-[var(--테라코타)] bg-[var(--테라코타)] text-white"
+                              : "border-[var(--테두리)] text-[var(--연한글자)] hover:border-[var(--테라코타)]"
+                          }`}
+                        >
+                          {지역.이모지} {지역.이름}
+                        </button>
+                      ),
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--연한글자)]">
+                    지역색이 강한 표현인지, 어디서나 통하는 말인지 알려주세요.
+                  </p>
+                </>
+              )}
+
               {새분류 === "비속어" && (
                 <p className="mt-1 text-xs text-[var(--연한글자)]">
                   💡 메모에 강도와 지역을 적어주세요. (예: 멕시코에서 꽤 셈)
@@ -805,6 +846,30 @@ export default function Home() {
                           ))}
                         </div>
 
+                        {/* 🌎 지역 */}
+                        <label className="mt-3 block text-xs text-[var(--연한글자)]">
+                          🌎 지역
+                        </label>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          {[
+                            { 값: "", 이모지: "", 이름: "미확인" },
+                            ...지역목록,
+                          ].map((지역) => (
+                            <button
+                              key={지역.이름}
+                              type="button"
+                              onClick={() => 수정지역설정(지역.값)}
+                              className={`rounded-full border-2 px-3 py-1 text-xs transition ${
+                                수정지역 === 지역.값
+                                  ? "border-[var(--테라코타)] bg-[var(--테라코타)] text-white"
+                                  : "border-[var(--테두리)] text-[var(--연한글자)] hover:border-[var(--테라코타)]"
+                              }`}
+                            >
+                              {지역.이모지} {지역.이름}
+                            </button>
+                          ))}
+                        </div>
+
                         {/* 🇪🇸 번역문 */}
                         <label className="mt-3 block text-xs text-[var(--연한글자)]">
                           스페인어 번역
@@ -878,6 +943,15 @@ export default function Home() {
                           <p className="text-lg text-[var(--먹색)]">
                             {제안.translation}
                           </p>
+                          {지역찾기(제안.region) && (
+                            <span
+                              title={지역찾기(제안.region)!.설명}
+                              className="shrink-0 rounded-full bg-[var(--크림)] px-2 py-0.5 text-xs text-[var(--연한글자)]"
+                            >
+                              {지역찾기(제안.region)!.이모지}{" "}
+                              {지역찾기(제안.region)!.이름}
+                            </span>
+                          )}
                           {/* 📋 복사 */}
                           <button
                             type="button"
