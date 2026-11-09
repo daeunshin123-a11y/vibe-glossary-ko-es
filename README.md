@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📖 한국어 → 스페인어 번역 용어집
 
-## Getting Started
+> 번역가들이 **번역과 그렇게 옮긴 이유**를 익명으로 모으는 공유 용어집
 
-First, run the development server:
+🔗 **[사이트 열기](https://vibe-glossary-ko-es.vercel.app)**
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 왜 만들었나
+
+숏폼 드라마를 스페인어로 더빙하다 보면, 사전에 없는 말이 계속 나옵니다.
+**잼민이, 내로남불, 국뽕, 월세**— 뜻은 아는데 **스페인어로 뭐라고 해야 자연스러운지**가 문제입니다.
+
+더 어려운 건 그다음입니다. 같은 스페인어라도 **멕시코에서 쓰는 말과 스페인에서 쓰는 말이 다릅니다.**
+중남미 시청자를 대상으로 하는데 스페인에서만 통하는 표현을 쓰면 어색해집니다.
+
+이런 판단은 보통 번역가 개인의 머릿속에만 쌓이고 사라집니다.
+그래서 **번역만이 아니라 "왜 그렇게 옮겼는지"까지 함께 남기는** 용어집을 만들었습니다.
+
+---
+
+## 기능
+
+| | |
+|---|---|
+| 📝 **번역 등록** | 한 단어에 여러 번역을 올릴 수 있습니다 (정답은 하나가 아니니까요) |
+| 💡 **번역 설명** | "anciana 는 대면 상황에서 쓰면 무례함" 같은 판단 근거를 남깁니다 |
+| 🌎 **지역 표시** | 중립 / 멕시코 / 스페인 / 아르헨티나 / 콜롬비아 |
+| ❤️ **하트** | 좋은 번역에 공감을 표시합니다 |
+| 💬 **댓글** | 번역마다 토론할 수 있습니다 |
+| ✏️ **수정** | 번역은 누구나 고칠 수 있고, 고친 사람이 함께 표시됩니다 |
+| 🙋 **번역 요청** | 모르는 말을 올려두면 다른 사람이 답해줍니다 |
+| 🏷️ **분류 탭** | 문화 · 신조어 · 비속어 |
+
+---
+
+## 익명이지만 익명이 아니게
+
+로그인이 없습니다. 대신 방문할 때마다 **귀여운 별명**이 자동으로 만들어집니다.
+
+```
+해양동짱돌 · 우울한리코더 · 얼큰한체리 · 발랄한코끼리
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+그리고 활동량에 따라 별명 앞에 **등급 이모지**가 붙습니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+🌱 → 🌿 → 🌳 → 🌟 → 👑
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+가입은 귀찮고 아무나 쓰는 건 싫은, 그 사이를 노린 장치입니다.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 만든 방법
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| | |
+|---|---|
+| 화면 | Next.js (App Router) · React · Tailwind |
+| 데이터 | Turso (클라우드 SQLite) |
+| 배포 | Vercel |
+| 글씨체 | 고운돋움 |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 직접 돌려보려면
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm install
+cp .env.example .env.local   # Turso 접속 정보를 채웁니다
+npm run dev
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+데이터베이스 표는 아래 명령으로 만듭니다. 여러 번 돌려도 안전합니다.
+
+```bash
+node scripts/표만들기.mjs
+```
+
+---
+
+## 이어지는 작업
+
+이 용어집은 혼자 쓰이지 않고, 뒤이은 프로젝트들의 **공통 데이터베이스**가 됩니다.
+
+| | |
+|---|---|
+| [번역 용어집 챗봇](https://github.com/daeunshin123-a11y/vibe-glossary-chatbot) | 이 용어집만 근거로 답하는 챗봇 (RAG) |
+| [번역 리서치 에이전트](https://github.com/daeunshin123-a11y/vibe-translation-agent) | 용어집에 없는 말을 직접 조사 |
+| [용어집 MCP 서버](https://github.com/daeunshin123-a11y/glossary-mcp) | Claude Code 가 이 용어집을 도구로 사용 |
